@@ -9,8 +9,8 @@ def check_active_subscription(user, db: Session):
         .filter(
             Subscription.user_id == user.user_id,
             Subscription.status.in_([
-                SubscriptionStatus.trial,
-                SubscriptionStatus.active
+                SubscriptionStatus.TRIAL,
+                SubscriptionStatus.ACTIVE
             ])
         )
         .first()

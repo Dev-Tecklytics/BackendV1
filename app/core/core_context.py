@@ -3,6 +3,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from app.core.api_key_auth import get_api_key_user
 from app.core.subscription_check import check_active_subscription
+from app.core.quota_check import check_quota
 from app.core.deps import get_db
 
 def get_core_context(

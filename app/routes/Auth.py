@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
 import logging
 
 # Standard imports matching your project structure
 try:
     from app.schemas.user import UserRegistrationRequest, UserResponse
     from app.models.user import User
+    from app.models.subscription import Subscription
+    from app.models.subscription_plan import SubscriptionPlan
+    from app.models.enums import SubscriptionStatus
     from app.core.deps import get_db
     from app.core.security import hash_password, verify_password
     from app.schemas.auth import LoginRequest, TokenResponse
@@ -46,6 +50,38 @@ def register_user(request: UserRegistrationRequest, db: Session = Depends(get_db
         db.add(user)
         db.commit()
         db.refresh(user)
+        
+        # 4. Create trial subscription
+        trial_plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == "Trial").first()
+        if not trial_plan:
+            # Create default trial plan if it doesn't exist
+            from app.models.enums import BillingCycle
+            trial_plan = SubscriptionPlan(
+                name="Trial",
+                description="30-day free trial",
+                price=0.00,
+                billing_cycle=BillingCycle.MONTHLY,
+                max_analyses_per_month=10,
+                api_rate_limit=100,
+                max_file_size_mb=10
+            )
+            db.add(trial_plan)
+            db.commit()
+            db.refresh(trial_plan)
+            logger.info("Created default Trial plan")
+        
+        subscription = Subscription(
+            user_id=user.user_id,
+            plan_id=trial_plan.plan_id,
+            status=SubscriptionStatus.TRIAL,
+            start_date=datetime.utcnow(),
+            end_date=datetime.utcnow() + timedelta(days=30)
+        )
+        db.add(subscription)
+        db.commit()
+        db.refresh(subscription)
+        logger.info(f"Trial subscription created for user: {user.email}")
+        
         logger.info(f"User created successfully: {user.email}")
         return user
     except Exception as e:
