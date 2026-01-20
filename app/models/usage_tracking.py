@@ -10,6 +10,12 @@ class UsageTracking(Base):
     usage_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
     api_key_id = Column(UUID(as_uuid=True), ForeignKey("api_keys.api_key_id"))
+    
+    # Usage counters
+    api_calls_count = Column(Integer, default=0)
+    ai_calls_count = Column(Integer, default=0)
+    
+    # Request details
     endpoint = Column(String)
     response_status = Column(Integer)
     file_size_mb = Column(DECIMAL)

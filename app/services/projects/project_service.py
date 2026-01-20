@@ -1,0 +1,48 @@
+from sqlalchemy.orm import Session
+from uuid import UUID
+
+from app.models.project import Project
+from app.schemas.project import ProjectCreate, ProjectUpdate
+
+
+def create_project(db: Session, user_id: UUID, data: ProjectCreate) -> Project:
+    project = Project(
+        user_id=user_id,
+        name=data.name,
+        platform=data.platform,
+        description=data.description,
+    )
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def list_projects(db: Session, user_id: UUID) -> list[Project]:
+    return db.query(Project).filter(Project.user_id == user_id).all()
+
+
+def get_project(db: Session, project_id: UUID, user_id: UUID) -> Project | None:
+    return (
+        db.query(Project)
+        .filter(Project.project_id == project_id, Project.user_id == user_id)
+        .first()
+    )
+
+
+def update_project(
+    db: Session, project: Project, data: ProjectUpdate
+) -> Project:
+    if data.name is not None:
+        project.name = data.name
+    if data.description is not None:
+        project.description = data.description
+
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def delete_project(db: Session, project: Project):
+    db.delete(project)
+    db.commit()
