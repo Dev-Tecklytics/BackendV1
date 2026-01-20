@@ -25,3 +25,9 @@ def track_usage(
 
     db.add(usage)
     db.commit()
+
+def increment_ai_calls(db, user_id):
+    usage = _get_or_create_usage(db, user_id)
+    usage.ai_calls_count = (usage.ai_calls_count or 0) + 1
+    db.commit()
+

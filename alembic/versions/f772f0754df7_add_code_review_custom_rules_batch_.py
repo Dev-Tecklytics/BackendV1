@@ -1,8 +1,8 @@
-"""add role to users
+"""add code review custom rules batch export mapping
 
-Revision ID: d47ce51b91cf
-Revises: 78ef792d1592
-Create Date: 2025-12-24 05:02:55.510060
+Revision ID: f772f0754df7
+Revises: 3a704896a316
+Create Date: 2026-01-19 22:46:26.018841
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd47ce51b91cf'
-down_revision: Union[str, Sequence[str], None] = '78ef792d1592'
+revision: str = 'f772f0754df7'
+down_revision: Union[str, Sequence[str], None] = '3a704896a316'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
