@@ -1,8 +1,0 @@
-Alembic (Database Migration Tool for SQLAlchemy ful automated)
-command:
-
-alembic init alembic
-alembic revision --autogenerate -m "complete core schema"
-alembic upgrade head
-
-
