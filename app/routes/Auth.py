@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from app.core.api_key import generate_api_key
+from app.models.api_key import ApiKey
 import logging
 
 # Standard imports matching your project structure
@@ -62,6 +64,19 @@ def register_user(request: UserRegistrationRequest, db: Session = Depends(get_db
         db.add(user)
         db.commit()
         db.refresh(user)
+
+        raw_key, prefix, key_hash = generate_api_key()
+        api_key = ApiKey(
+            user_id=user.user_id,
+            key_hash=key_hash,
+            name=request.full_name,
+            key_prefix=prefix
+        )
+
+        # Adding to DB
+        db.add(api_key)
+        db.commit()
+        db.refresh(api_key)
         
         # 4. Create trial subscription
         trial_plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.name == "Trial").first()
@@ -120,6 +135,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             )
 
         token = create_access_token({"sub": str(user.user_id)})
+        apiKey = db.query(ApiKey).filter(ApiKey.user_id == user.user_id, ApiKey.is_active == True).first()
         logger.info(f"Login successful for: {request.email}")
         
         # Return a structure that satisfies most JWT frontends
@@ -130,7 +146,9 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
                 "email": user.email,
                 "full_name": user.full_name,
                 "user_id": user.user_id
-            }
+            },
+            "api_key_hash" : apiKey.key_hash,
+            "api_key_prefix" : apiKey.key_prefix
         }
     except Exception as e:
         logger.error(f"LOGIN ERROR: {str(e)}")
@@ -140,9 +158,12 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 def refresh_token(current_user=Depends(get_current_user)):
     try:
         token = create_access_token({"sub": str(current_user.user_id)})
+        apiKey = db.query(ApiKey).filter(ApiKey.user_id == current_user.user_id, ApiKey.is_active == True).first()
         return {
             "access_token": token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "api_key_hash" : apiKey.key_hash,
+            "api_key_prefix" : apiKey.key_prefix
         }
     except Exception as e:
         logger.error(f"REFRESH ERROR: {str(e)}")

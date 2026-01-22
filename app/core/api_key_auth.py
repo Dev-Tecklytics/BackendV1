@@ -22,14 +22,17 @@ def get_api_key_user(
         )
     raw_key = credentials.credentials
     print(raw_key)
-    # Generate key hash
-    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    apiKeyRaw = raw_key.split(" : ")
+    key_hash = apiKeyRaw[1]
     print(key_hash)
+    key_prefix = apiKeyRaw[0]
+    print(key_prefix)
 
     # Get API key from db
     api_key = (
         db.query(ApiKey)
         .filter(ApiKey.key_hash == key_hash)
+        .filter(ApiKey.key_prefix == key_prefix)
         .filter(ApiKey.is_active == True)
         .first()
     )
