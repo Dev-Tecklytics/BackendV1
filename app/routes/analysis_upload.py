@@ -102,23 +102,70 @@ def upload_file_for_analysis(
         else:
             platform = "Unknown"
 
-        # Parse workflow
+        # 1. Ensure a Project exists
+        project = db.query(Project).filter(Project.user_id == user.user_id).first()
+        if not project:
+            project = Project(
+                user_id=user.user_id,
+                name="Default Project",
+                platform=platform
+            )
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+
+        # 2. Create File entry
+        db_file = FileModel(
+            project_id=project.project_id,
+            file_name=file.filename,
+            file_path=str(file_path),
+            file_size=len(file_bytes)
+        )
+        db.add(db_file)
+        db.commit()
+        db.refresh(db_file)
+
+        # 3. Parse workflow
         parsed_workflow = parse_workflow(str(file_path), platform)
 
-        # Calculate deterministic metrics
+        # 4. Calculate deterministic metrics
         metrics = calculate_metrics(parsed_workflow)
 
-        # Complexity scoring
+        # 5. Complexity scoring
         complexity = calculate_complexity(metrics)
 
-        # Code review
-        review_result = run_engine_review(asdict(metrics))
+        # 6. Create Workflow entry
+        workflow = Workflow(
+            project_id=project.project_id,
+            file_id=db_file.file_id,
+            platform=platform,
+            complexity_score=complexity.score,
+            complexity_level=complexity.level,
+            activity_count=metrics.activity_count,
+            nesting_depth=metrics.nesting_depth,
+            variable_count=metrics.variable_count,
+            invoked_workflows=metrics.invoked_workflows,
+            has_custom_code=metrics.has_custom_code
+        )
+        db.add(workflow)
+        db.commit()
+        db.refresh(workflow)
+
+        # 7. Run code review (this service saves to DB internally)
+        review = run_service_review(db, workflow, user.user_id)
 
         result = {
+            "workflow_id": str(workflow.workflow_id),
             "platform": platform,
             "metrics": asdict(metrics),
             "complexity": asdict(complexity),
-            "code_review": review_result
+            "code_review": {
+                "score": review.overall_score,
+                "grade": review.grade,
+                "total_issues": review.total_issues,
+                "findings": review.findings
+            },
+            "analyzed_at": workflow.analyzed_at.isoformat() if workflow.analyzed_at else None
         }
 
         analysis.result = result
@@ -177,13 +224,14 @@ def upload_and_analyze_uipath(
     )
 
     if existing_analysis:
-        return {
-            "analysis_id": str(existing_analysis.analysis_id),
-            "status": "completed",
-            "file_name": file.filename,
-            "result": existing_analysis.result,
-            "cached": True
-        }
+        # Return cached result with cached flag
+        cached_result = existing_analysis.result.copy() if existing_analysis.result else {}
+        cached_result["cached"] = True
+        logger.info(f"CACHE HIT for file hash: {file_hash[:16]}...")
+        logger.info(f"Returning cached response: workflow_id={cached_result.get('workflow_id')}, platform={cached_result.get('platform')}")
+        print(f"\n{'='*80}\nCACHED RESPONSE:\n{json.dumps(cached_result, indent=2)}\n{'='*80}\n")
+        print(cached_result)
+        return cached_result
 
     # Ensure it's UiPath
     file_ext = Path(file.filename).suffix.lower()
@@ -260,7 +308,9 @@ def upload_and_analyze_uipath(
             complexity_level=complexity.level,
             activity_count=metrics.activity_count,
             nesting_depth=metrics.nesting_depth,
-            variable_count=metrics.variable_count
+            variable_count=metrics.variable_count,
+            invoked_workflows=metrics.invoked_workflows,
+            has_custom_code=metrics.has_custom_code
         )
         db.add(workflow)
         db.commit()
@@ -269,19 +319,76 @@ def upload_and_analyze_uipath(
         # 7. Run code review (this service saves to DB internally)
         review = run_service_review(db, workflow, user.user_id)
 
+        # 8. Calculate activity breakdown
+        from collections import Counter
+        activity_breakdown = dict(Counter(parsed_workflow.activities))
+        
+        # 9. Detect issues from metrics and review
+        detected_issues = []
+        if metrics.nesting_depth > 3:
+            detected_issues.append(f"High nesting depth (level {metrics.nesting_depth})")
+        if review.total_issues > 0:
+            for finding in review.findings:
+                if isinstance(finding, dict):
+                    detected_issues.append(finding.get("message", "Unknown issue"))
+        if metrics.has_custom_code:
+            detected_issues.append("Contains custom code/scripts")
+        
+        # 10. Generate suggestions from code review findings
+        suggestions = []
+        if review.findings:
+            for idx, finding in enumerate(review.findings, 1):
+                if isinstance(finding, dict):
+                    suggestions.append({
+                        "id": idx,
+                        "priority": finding.get("severity", "medium").lower(),
+                        "title": finding.get("message", "Code Quality Issue"),
+                        "description": finding.get("recommendation", "Review and refactor"),
+                        "impact": finding.get("impact", "Medium"),
+                        "effort": finding.get("effort", "Medium"),
+                        "benefits": ["Improved maintainability", "Better code quality"],
+                        "implementation_steps": [finding.get("recommendation", "Review code")]
+                    })
+        
+        # 11. Estimate migration effort (basic formula)
+        base_hours = 2
+        complexity_multiplier = complexity.score / 20  # Scale complexity score
+        effort_hours = round(base_hours + complexity_multiplier + (metrics.invoked_workflows * 0.5), 1)
+        
+        # 12. Build frontend-expected response
         result = {
             "workflow_id": str(workflow.workflow_id),
+            "workflowName": file.filename,
             "platform": platform,
-            "metrics": asdict(metrics),
-            "complexity": asdict(complexity),
-            "code_review": {
-                "score": review.overall_score,
-                "grade": review.grade,
-                "total_issues": review.total_issues,
-                "findings": review.findings
+            "analysis": {
+                "activity_count": metrics.activity_count,
+                "complexity_score": float(complexity.score),
+                "complexity_level": complexity.level,
+                "activity_breakdown": activity_breakdown,
+                "detected_issues": detected_issues if detected_issues else ["No major issues detected"],
+                "nesting_depth": metrics.nesting_depth,
+                "variable_count": metrics.variable_count,
+                "invoked_workflows_count": metrics.invoked_workflows,
+                "exception_handlers_count": activity_breakdown.get("TryCatch", 0) + activity_breakdown.get("Catch", 0),
+                "analyzed_at": workflow.analyzed_at.isoformat() if workflow.analyzed_at else datetime.utcnow().isoformat(),
+                "file_size_kb": round(len(file_bytes) / 1024, 2)
+            },
+            "suggestions": suggestions if suggestions else [{
+                "id": 1,
+                "priority": "low",
+                "title": "No Critical Issues",
+                "description": "Workflow appears to be well-structured",
+                "impact": "Low",
+                "effort": "None",
+                "benefits": ["Maintain current quality"],
+                "implementation_steps": ["Continue best practices"]
+            }],
+            "migration": {
+                "total_effort_hours": effort_hours
             }
         }
 
+        print(result)
         analysis.result = result
         analysis.status = AnalysisStatus.COMPLETED
         db.commit()

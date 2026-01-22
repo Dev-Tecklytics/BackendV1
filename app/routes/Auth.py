@@ -151,6 +151,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             "api_key_prefix" : apiKey.key_prefix
         }
     except Exception as e:
+        print(e)
         logger.error(f"LOGIN ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
