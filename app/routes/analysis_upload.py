@@ -13,10 +13,15 @@ import logging
 from app.core.core_context import get_core_context
 from app.core.deps import get_db
 from app.models.analysis_history import AnalysisHistory, AnalysisStatus
+from app.models.project import Project
+from app.models.file import File as FileModel
+from app.models.workflow import Workflow
+from app.models.code_review import CodeReview
 from app.services.analysis.parser import parse_workflow
 from app.services.analysis.metrics import calculate_metrics
 from app.services.analysis.complexity import calculate_complexity
 from app.services.code_review.engine import run_code_review as run_engine_review
+from app.services.code_review.code_review_service import run_code_review as run_service_review
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +177,13 @@ def upload_and_analyze_uipath(
     )
 
     if existing_analysis:
-        return existing_analysis.result
+        return {
+            "analysis_id": str(existing_analysis.analysis_id),
+            "status": "completed",
+            "file_name": file.filename,
+            "result": existing_analysis.result,
+            "cached": True
+        }
 
     # Ensure it's UiPath
     file_ext = Path(file.filename).suffix.lower()
@@ -208,30 +219,67 @@ def upload_and_analyze_uipath(
     try:
         platform = "UiPath"
 
-        # Parse workflow
+        # 1. Ensure a Project exists
+        project = db.query(Project).filter(Project.user_id == user.user_id).first()
+        if not project:
+            project = Project(
+                user_id=user.user_id,
+                name="Default Project",
+                platform=platform
+            )
+            db.add(project)
+            db.commit()
+            db.refresh(project)
+
+        # 2. Create File entry
+        db_file = FileModel(
+            project_id=project.project_id,
+            file_name=file.filename,
+            file_path=str(file_path),
+            file_size=len(file_bytes)
+        )
+        db.add(db_file)
+        db.commit()
+        db.refresh(db_file)
+
+        # 3. Parse workflow
         parsed_workflow = parse_workflow(str(file_path), platform)
 
-        # Calculate metrics
+        # 4. Calculate metrics
         metrics = calculate_metrics(parsed_workflow)
 
-        # Complexity scoring
+        # 5. Complexity scoring
         complexity = calculate_complexity(metrics)
 
-        # Run code review
-        review_result = run_engine_review(asdict(metrics))
+        # 6. Create Workflow entry
+        workflow = Workflow(
+            project_id=project.project_id,
+            file_id=db_file.file_id,
+            platform=platform,
+            complexity_score=complexity.score,
+            complexity_level=complexity.level,
+            activity_count=metrics.activity_count,
+            nesting_depth=metrics.nesting_depth,
+            variable_count=metrics.variable_count
+        )
+        db.add(workflow)
+        db.commit()
+        db.refresh(workflow)
+
+        # 7. Run code review (this service saves to DB internally)
+        review = run_service_review(db, workflow, user.user_id)
 
         result = {
-            "workflow_id": str(analysis_id),
+            "workflow_id": str(workflow.workflow_id),
             "platform": platform,
-            "metrics": {
-                "activity_count": metrics.activity_count,
-                "variable_count": metrics.variable_count,
-                "nesting_depth": metrics.nesting_depth,
-                "invoked_workflows": metrics.invoked_workflows,
-                "has_custom_code": metrics.has_custom_code
-            },
+            "metrics": asdict(metrics),
             "complexity": asdict(complexity),
-            "code_review": review_result
+            "code_review": {
+                "score": review.overall_score,
+                "grade": review.grade,
+                "total_issues": review.total_issues,
+                "findings": review.findings
+            }
         }
 
         analysis.result = result
