@@ -1,0 +1,571 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "IAAP Backend API",
+    "version": "1.0.0",
+    "description": "Intelligent Automation Analysis Platform API"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "summary": "Register new user",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8 },
+                  "full_name": { "type": "string" },
+                  "company_name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User registered successfully" },
+          "400": { "description": "Email already registered" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Login user",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful, returns JWT token" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/v1/auth/refresh-token": {
+      "post": {
+        "summary": "Refresh access token",
+        "tags": ["Authentication"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "New token generated" }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "tags": ["Authentication"],
+        "responses": {
+          "204": { "description": "Logout successful" }
+        }
+      }
+    },
+    "/api/v1/user/me": {
+      "get": {
+        "summary": "Get current user profile",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile" }
+        }
+      }
+    },
+    "/api/v1/user/profile": {
+      "put": {
+        "summary": "Update user profile",
+        "tags": ["User"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "full_name",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "company_name",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Profile updated" }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "post": {
+        "summary": "Create project",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "platform"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "platform": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Project created" }
+        }
+      },
+      "get": {
+        "summary": "List all projects",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of projects" }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "summary": "Get project by ID",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Project details" },
+          "404": { "description": "Project not found" }
+        }
+      },
+      "patch": {
+        "summary": "Update project",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Project updated" },
+          "404": { "description": "Project not found" }
+        }
+      },
+      "delete": {
+        "summary": "Delete project",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Project deleted" },
+          "404": { "description": "Project not found" }
+        }
+      }
+    },
+    "/api/v1/files/upload": {
+      "post": {
+        "summary": "Upload file",
+        "tags": ["Files"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "upload": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "File uploaded successfully" }
+        }
+      }
+    },
+    "/api/v1/workflows/analyze": {
+      "post": {
+        "summary": "Analyze workflow",
+        "tags": ["Workflows"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "platform",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Analysis results" },
+          "404": { "description": "File not found" }
+        }
+      }
+    },
+    "/api/v1/analyze": {
+      "post": {
+        "summary": "Perform analysis",
+        "tags": ["Analysis"],
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "file_name",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Analysis completed" }
+        }
+      }
+    },
+    "/api/v1/analyze/uipath": {
+      "post": {
+        "summary": "Analyze UiPath workflow",
+        "tags": ["Analysis"],
+        "security": [{ "bearerAuth": [] }, { "apiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Analysis started" }
+        }
+      }
+    },
+    "/api/v1/analyze/{analysis_id}": {
+      "get": {
+        "summary": "Get analysis result",
+        "tags": ["Analysis"],
+        "parameters": [
+          {
+            "name": "analysis_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Analysis result" }
+        }
+      }
+    },
+    "/api/v1/code-review": {
+      "post": {
+        "summary": "Review workflow code",
+        "tags": ["Code Review"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Code review results" },
+          "404": { "description": "Workflow not found" }
+        }
+      }
+    },
+    "/api/v1/batch": {
+      "post": {
+        "summary": "Create batch job",
+        "tags": ["Batch"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Batch job created" }
+        }
+      }
+    },
+    "/api/v1/subscription/plans": {
+      "get": {
+        "summary": "List subscription plans",
+        "tags": ["Subscription"],
+        "responses": {
+          "200": { "description": "List of plans" }
+        }
+      }
+    },
+    "/api/v1/subscription/subscribe": {
+      "post": {
+        "summary": "Subscribe to plan",
+        "tags": ["Subscription"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Subscription created" }
+        }
+      }
+    },
+    "/api/v1/subscription/current": {
+      "get": {
+        "summary": "Get current subscription",
+        "tags": ["Subscription"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Current subscription" }
+        }
+      }
+    },
+    "/api/v1/subscription/upgrade": {
+      "put": {
+        "summary": "Upgrade subscription",
+        "tags": ["Subscription"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Subscription upgraded" }
+        }
+      }
+    },
+    "/api/v1/subscription/cancel": {
+      "post": {
+        "summary": "Cancel subscription",
+        "tags": ["Subscription"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Subscription cancelled" }
+        }
+      }
+    },
+    "/api/v1/subscription/usage": {
+      "get": {
+        "summary": "Get subscription usage",
+        "tags": ["Subscription"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Usage statistics" }
+        }
+      }
+    },
+    "/api/v1/api_key": {
+      "post": {
+        "summary": "Create API key",
+        "tags": ["API Keys"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "API key created" }
+        }
+      },
+      "get": {
+        "summary": "List API keys",
+        "tags": ["API Keys"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of API keys" }
+        }
+      }
+    },
+    "/api/v1/api_key/{api_key_id}": {
+      "delete": {
+        "summary": "Delete API key",
+        "tags": ["API Keys"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "api_key_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "API key deleted" },
+          "404": { "description": "API key not found" }
+        }
+      }
+    },
+    "/api/v1/api_key/{api_key_id}/rotate": {
+      "put": {
+        "summary": "Rotate API key",
+        "tags": ["API Keys"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "api_key_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "New API key generated" }
+        }
+      }
+    },
+    "/api/v1/export/csv": {
+      "get": {
+        "summary": "Export to CSV",
+        "tags": ["Export"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compare": {
+      "post": {
+        "summary": "Compare workflows",
+        "tags": ["Compare"],
+        "parameters": [
+          {
+            "name": "activity_count",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "mapped_activities",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Comparison results" }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["Health"],
+        "responses": {
+          "200": { "description": "API is healthy" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

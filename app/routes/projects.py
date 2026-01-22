@@ -54,7 +54,7 @@ def update(
     return project_service.update_project(db, project, data)
 
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}")
 def delete(
     project_id: UUID,
     db: Session = Depends(get_db),
@@ -65,3 +65,9 @@ def delete(
         raise HTTPException(status_code=404, detail="Project not found")
 
     project_service.delete_project(db, project)
+    
+    return {
+        "message": "Project deleted successfully",
+        "project_id": str(project_id)
+    }
+

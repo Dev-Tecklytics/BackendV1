@@ -38,7 +38,19 @@ def register_user(request: UserRegistrationRequest, db: Session = Depends(get_db
                 detail="Email already registered"
             )
 
-        # 2. Creating user
+        # 2. Validate password length
+        password_length = len(request.password)
+        password_bytes_length = len(request.password.encode('utf-8'))
+        logger.info(f"Password length: {password_length} chars, {password_bytes_length} bytes")
+        
+        if password_bytes_length > 200:
+            logger.warning(f"Suspiciously long password received: {password_bytes_length} bytes")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is too long. Please use a password under 72 characters."
+            )
+
+        # 3. Creating user
         user = User(
             email=request.email,
             password_hash=hash_password(request.password),

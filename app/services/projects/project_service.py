@@ -5,7 +5,23 @@ from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 
+def get_project_by_name(db: Session, user_id: UUID, name: str) -> Project | None:
+    """Get a project by name for a specific user."""
+    return (
+        db.query(Project)
+        .filter(Project.user_id == user_id, Project.name == name)
+        .first()
+    )
+
+
 def create_project(db: Session, user_id: UUID, data: ProjectCreate) -> Project:
+    # Check if project with same name already exists for this user
+    existing_project = get_project_by_name(db, user_id, data.name)
+    if existing_project:
+        # Return existing project instead of creating duplicate
+        return existing_project
+    
+    # Create new project
     project = Project(
         user_id=user_id,
         name=data.name,

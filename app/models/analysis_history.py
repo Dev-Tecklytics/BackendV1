@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from app.core.database import Base
 from sqlalchemy.sql import func
@@ -19,5 +19,8 @@ class AnalysisHistory(Base):
     api_key_id = Column(UUID(as_uuid=True), ForeignKey("api_keys.api_key_id"))
     subscription_id = Column(UUID(as_uuid=True), ForeignKey("subscriptions.subscription_id"))
     file_name = Column(String)
+    file_path = Column(String, nullable=True)
+    file_hash = Column(String, nullable=True, index=True)
     status = Column(Enum(AnalysisStatus),)
+    result = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

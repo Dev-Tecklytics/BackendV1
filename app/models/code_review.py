@@ -18,4 +18,10 @@ class CodeReview(Base):
 
     findings = Column(JSON)
 
+    # AI-generated fields
+    ai_issues = Column(JSON, nullable=True)
+    ai_best_practices = Column(JSON, nullable=True)
+    ai_security_concerns = Column(JSON, nullable=True)
+    ai_refactoring_suggestions = Column(JSON, nullable=True)
+
     reviewed_at = Column(DateTime(timezone=True), server_default=func.now())
