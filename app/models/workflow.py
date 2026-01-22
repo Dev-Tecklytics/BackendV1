@@ -21,6 +21,9 @@ class Workflow(Base):
     activity_count = Column(Integer)
     nesting_depth = Column(Integer)
     variable_count = Column(Integer)
+    invoked_workflows = Column(Integer, default=0)
+    has_custom_code = Column(JSON, nullable=True) # or Boolean, but usually stored as JSON if complex
+
 
     # AI-generated fields
     ai_summary = Column(Text, nullable=True)

@@ -31,6 +31,11 @@ def increment_ai_calls(db, user_id):
     usage.ai_calls_count = (usage.ai_calls_count or 0) + 1
     db.commit()
 
+def increment_ai_calls(db, user_id):
+    usage = _get_or_create_usage(db, user_id)
+    usage.api_calls_count = (usage.api_calls_count or 0) + 1
+    db.commit()
+
 def _get_or_create_usage(db: Session, user_id):
     """Get or create usage tracking record for a user."""
     usage = db.query(UsageTracking).filter(UsageTracking.user_id == user_id).first()

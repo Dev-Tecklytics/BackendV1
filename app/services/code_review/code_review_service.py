@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.domain.rule_contracts import RuleContext, RuleFinding
 from app.models.workflow import Workflow
 from app.models.code_review import CodeReview
-from app.core.usage_tracker import increment_api_calls
+from app.core.usage_tracker import increment_ai_calls
 
 
 def run_code_review(
@@ -11,7 +11,7 @@ def run_code_review(
     workflow: Workflow,
     user_id,
 ) -> CodeReview:
-    increment_api_calls(db, user_id)
+    increment_ai_calls(db, user_id)
 
     context = RuleContext(
         platform=workflow.platform,
