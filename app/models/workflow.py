@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, JSON, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -21,5 +21,9 @@ class Workflow(Base):
     activity_count = Column(Integer)
     nesting_depth = Column(Integer)
     variable_count = Column(Integer)
+
+    # AI-generated fields
+    ai_summary = Column(Text, nullable=True)
+    ai_recommendations = Column(JSON, nullable=True)
 
     analyzed_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import health, Auth, user, api_key, analysis, analysis_history, analysis_result, analysis_upload, analysis_worker
 from app.routes import admin_users, admin_subscription, admin_api_keys, admin_usage, admin_analytics, admin_ai_analytics, subscription, migrate
-from app.routes import projects, files, workflows, batch, code_review, compare, export
+from app.routes import projects, files, workflows, batch, code_review, compare, export, custom_rules
 from app.routes.test import core_test
 app = FastAPI()
 # Configure CORS - FIXED VERSION
@@ -41,5 +41,6 @@ app.include_router(files.router)
 app.include_router(workflows.router)
 app.include_router(batch.router)
 app.include_router(code_review.router)
+app.include_router(custom_rules.router)
 app.include_router(compare.router)
 app.include_router(export.router)

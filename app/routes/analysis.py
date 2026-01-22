@@ -27,20 +27,3 @@ def analyze(
         file_name=file_name,
         db=db
     )
-
-@router.post("/uipath")
-def analyze_uipath(
-    file: UploadFile = File(...),
-    context=Depends(get_core_context)
-):
-    return {
-        "filename": file.filename,
-        "status": "processing"
-    }
-
-@router.get("/{analysis_id}")
-def get_analysis(analysis_id: str):
-    return {
-        "analysis_id": analysis_id,
-        "status": "completed"
-    }
