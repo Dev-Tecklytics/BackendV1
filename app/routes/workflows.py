@@ -24,6 +24,11 @@ class WorkflowUpdateRequest(BaseModel):
     variable_count: Optional[int] = None
     ai_summary: Optional[str] = None
     ai_recommendations: Optional[list] = None
+    estimated_effort_hours: Optional[float] = None
+    compatibility_score: Optional[int] = None
+    risk_indicators: Optional[list] = None
+    activity_breakdown: Optional[dict] = None
+    suggestions: Optional[list] = None
 
 
 @router.post("/analyze")
@@ -143,7 +148,12 @@ def list_workflows(
                 "variable_count": w.variable_count,
                 "ai_summary": w.ai_summary,
                 "ai_recommendations": w.ai_recommendations,
-                "analyzed_at": w.analyzed_at.isoformat() if w.analyzed_at else None,
+                "estimatedEffortHours": w.estimated_effort_hours,
+                "compatibilityScore": w.compatibility_score,
+                "riskIndicators": w.risk_indicators,
+                "activityBreakdown": w.activity_breakdown,
+                "suggestions": w.suggestions,
+                "analyzedAt": w.analyzed_at.isoformat() if w.analyzed_at else None,
             }
             for w in workflows
         ]

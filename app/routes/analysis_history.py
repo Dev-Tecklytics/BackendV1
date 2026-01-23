@@ -40,14 +40,20 @@ def analysis_history(
         )
         
         # Filter in Python by checking if workflow_id in result matches
-        filtered_history = []
+        final_history = []
         for record in history:
             if record.result and isinstance(record.result, dict):
-                result_workflow_id = record.result.get("workflow_id")
+                # Handle both old 'workflow_id' and new 'id' formats
+                res = record.result.copy()
+                result_workflow_id = res.get("id") or res.get("workflow_id")
+                
                 if result_workflow_id in workflow_id_list:
-                    filtered_history.append(record)
+                    # Match /uipath structure
+                    if "workflow_id" in res and "id" not in res:
+                        res["id"] = res["workflow_id"]
+                    final_history.append(res)
         
-        return filtered_history
+        return final_history
     else:
         # Return all analysis history for the user
         history = (
@@ -57,4 +63,32 @@ def analysis_history(
             .all()
         )
         
-        return history
+        final_history = []
+        for record in history:
+            if record.result and isinstance(record.result, dict):
+                res = record.result.copy()
+                # Ensure compatibility with /uipath structure
+                if "workflow_id" in res and "id" not in res:
+                    res["id"] = res["workflow_id"]
+                
+                # Add status/filename/id if missing
+                if "status" not in res:
+                    res["status"] = record.status
+                if "workflowName" not in res:
+                    res["workflowName"] = record.file_name
+                if "platform" not in res:
+                    res["platform"] = getattr(record, 'platform', 'Unknown')
+                    
+                final_history.append(res)
+            else:
+                # Return a skeleton object for partial/failed analyses
+                final_history.append({
+                    "id": str(record.analysis_id),
+                    "workflowName": record.file_name,
+                    "status": record.status,
+                    "analyzedAt": record.created_at.isoformat() if record.created_at else None,
+                    "platform": "Unknown",
+                    "result": record.result  # Could be error details
+                })
+        
+        return final_history

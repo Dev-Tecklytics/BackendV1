@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
 
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Project(Base):
@@ -16,3 +17,7 @@ class Project(Base):
     description = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    files = relationship("File", cascade="all, delete-orphan", passive_deletes=True)
+    workflows = relationship("Workflow", cascade="all, delete-orphan", passive_deletes=True)

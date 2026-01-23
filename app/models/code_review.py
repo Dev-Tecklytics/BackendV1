@@ -10,7 +10,7 @@ class CodeReview(Base):
     __tablename__ = "code_reviews"
 
     review_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.workflow_id"))
+    workflow_id = Column(UUID(as_uuid=True), ForeignKey("workflows.workflow_id", ondelete="CASCADE"))
 
     overall_score = Column(Integer)
     grade = Column(String)
