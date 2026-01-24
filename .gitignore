@@ -23,3 +23,6 @@ wheels/
 # Alembic migrations
 alembic/
 alembic.ini
+
+# Uploads
+uploads/
