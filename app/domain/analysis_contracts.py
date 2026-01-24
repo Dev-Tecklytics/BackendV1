@@ -8,7 +8,9 @@ class ParsedWorkflow:
     activities: list[str]
     variables: list[str]
     nesting_depth: int
-    raw_tree: Any  # lxml root, never persisted
+    raw_activities: list[dict] = None
+    raw_variables: list[dict] = None
+    raw_tree: Any = None  # lxml root, never persisted
 
 
 @dataclass

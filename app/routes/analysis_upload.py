@@ -146,7 +146,9 @@ def upload_file_for_analysis(
             nesting_depth=metrics.nesting_depth,
             variable_count=metrics.variable_count,
             invoked_workflows=metrics.invoked_workflows,
-            has_custom_code=metrics.has_custom_code
+            has_custom_code=metrics.has_custom_code,
+            raw_activities=parsed_workflow.raw_activities,
+            raw_variables=parsed_workflow.raw_variables
         )
         db.add(workflow)
         db.commit()
@@ -357,7 +359,9 @@ def upload_and_analyze_uipath(
             nesting_depth=metrics.nesting_depth,
             variable_count=metrics.variable_count,
             invoked_workflows=metrics.invoked_workflows,
-            has_custom_code=metrics.has_custom_code
+            has_custom_code=metrics.has_custom_code,
+            raw_activities=parsed_workflow.raw_activities,
+            raw_variables=parsed_workflow.raw_variables
         )
 
         db.add(workflow)

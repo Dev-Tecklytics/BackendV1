@@ -24,6 +24,8 @@ class Workflow(Base):
     variable_count = Column(Integer)
     invoked_workflows = Column(Integer, default=0)
     has_custom_code = Column(JSON, nullable=True)
+    raw_activities = Column(JSON, nullable=True)
+    raw_variables = Column(JSON, nullable=True)
 
     # Migration Analysis Fields
     estimated_effort_hours = Column(Integer, nullable=True)

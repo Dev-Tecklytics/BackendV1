@@ -123,11 +123,28 @@ def parse_workflow(file_path: str, platform: str) -> ParsedWorkflow:
             # Add as activity
             activities.append(tag_name)
 
-        # Calculate nesting depth only for real activity nodes
         real_nodes = [
             el for el in root.iter()
             if clean_tag(el.tag) not in IGNORED_TAGS
         ]
+
+        raw_activities = []
+        for el in real_nodes:
+            tag = clean_tag(el.tag)
+            if tag in {"Sequence", "Flowchart"}: continue
+            raw_activities.append({
+                "type": tag,
+                "displayName": el.get("DisplayName") or tag
+            })
+
+        raw_variables = []
+        for el in root.findall(".//*[@Name]"):
+            v_name = el.get("Name")
+            if v_name:
+                raw_variables.append({
+                    "name": v_name,
+                    "defaultValue": el.get("Default") or ""
+                })
 
         nesting_depth = max(
             (len([a for a in el.iterancestors()]) for el in real_nodes),
@@ -139,16 +156,32 @@ def parse_workflow(file_path: str, platform: str) -> ParsedWorkflow:
     # -----------------------------------
     elif platform == "Blue Prism":
 
+        activities_data = root.findall(".//stage") + root.findall(".//action")
         activities = [
             el.get("name") or el.tag
-            for el in root.findall(".//stage") + root.findall(".//action")
+            for el in activities_data
         ]
 
+        raw_activities = []
+        for el in activities_data:
+            raw_activities.append({
+                "type": el.tag,
+                "displayName": el.get("name") or el.tag
+            })
+
+        variables_data = root.findall(".//variable")
         variables = [
             el.get("name")
-            for el in root.findall(".//variable")
+            for el in variables_data
             if el.get("name")
         ]
+
+        raw_variables = []
+        for el in variables_data:
+            raw_variables.append({
+                "name": el.get("name"),
+                "type": el.get("type")
+            })
 
         nesting_depth = max(
             (len(el.xpath("ancestor::*")) for el in root.findall(".//*")),
@@ -184,5 +217,7 @@ def parse_workflow(file_path: str, platform: str) -> ParsedWorkflow:
         activities=activities,
         variables=variables,
         nesting_depth=nesting_depth,
+        raw_activities=raw_activities if 'raw_activities' in locals() else [],
+        raw_variables=raw_variables if 'raw_variables' in locals() else [],
         raw_tree=root,
     )
