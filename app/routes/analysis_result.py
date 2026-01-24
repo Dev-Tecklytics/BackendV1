@@ -25,6 +25,20 @@ def get_analysis_result(
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
+    if analysis.result and isinstance(analysis.result, dict):
+        result = analysis.result.copy()
+        # Ensure consistency with /uipath
+        if "workflow_id" in result and "id" not in result:
+            result["id"] = result["workflow_id"]
+        
+        # Merge status and file_name if not already present in stored result
+        if "status" not in result:
+            result["status"] = analysis.status
+        if "workflowName" not in result:
+            result["workflowName"] = analysis.file_name
+            
+        return result
+
     return {
         "analysis_id": str(analysis.analysis_id),
         "status": analysis.status,

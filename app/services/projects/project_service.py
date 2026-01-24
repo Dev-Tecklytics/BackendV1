@@ -60,5 +60,19 @@ def update_project(
 
 
 def delete_project(db: Session, project: Project):
+    # Manually delete related records to avoid foreign key violations 
+    # if DB constraints don't have CASCADE set up.
+    from app.models.workflow import Workflow
+    from app.models.file import File
+    from app.models.code_review import CodeReview
+    
+    # Get all workflow IDs for this project to clean up their reviews
+    workflow_ids = [w.workflow_id for w in db.query(Workflow.workflow_id).filter(Workflow.project_id == project.project_id).all()]
+    if workflow_ids:
+        db.query(CodeReview).filter(CodeReview.workflow_id.in_(workflow_ids)).delete(synchronize_session=False)
+
+    db.query(Workflow).filter(Workflow.project_id == project.project_id).delete(synchronize_session=False)
+    db.query(File).filter(File.project_id == project.project_id).delete(synchronize_session=False)
+    
     db.delete(project)
     db.commit()
