@@ -14,6 +14,7 @@ class Workflow(Base):
     project_id = Column(UUID(as_uuid=True), ForeignKey("projects.project_id", ondelete="CASCADE"))
     file_id = Column(UUID(as_uuid=True), ForeignKey("files.file_id", ondelete="CASCADE"))
 
+    workflow_name = Column(String, nullable=True, default="Unknown workflow")
     platform = Column(String, nullable=False)
 
     complexity_score = Column(Integer)

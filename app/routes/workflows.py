@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.models.file import File
 from app.models.workflow import Workflow
+from app.models.project import Project
 from app.services.workflows.complexity import analyze_workflow
 from app.services.workflows.workflow_llm_gateway import run_workflow_llm_analysis
 from app.models.user import User
@@ -85,6 +86,41 @@ def analyze(
     }
 
 
+@router.get("/project")
+def get_workflows_by_project(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get workflows for a specific project ID."""
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    workflows = db.query(Workflow).filter(Workflow.project_id == project_id).all()
+    
+    return [
+        {
+            "id": str(w.workflow_id),
+            "workflowName": w.workflow_name or "Unknown workflow",
+            "platform": w.platform,
+            "complexityScore": w.complexity_score or 0,
+            "complexityLevel": w.complexity_level or "Unknown",
+            "totalActivities": w.activity_count or 0,
+            "estimatedEffortHours": w.estimated_effort_hours or 0,
+            "riskIndicators": w.risk_indicators or [],
+            "activityBreakdown": w.activity_breakdown or {},
+            "analyzedAt": w.analyzed_at.isoformat() if w.analyzed_at else "",
+            "project": {
+                "id": str(project.project_id),
+                "name": project.name,
+                "platform": project.platform
+            }
+        }
+        for w in workflows
+    ]
+
+
 @router.get("/{workflow_id}")
 def get_workflow(
     workflow_id: UUID,
@@ -134,7 +170,6 @@ def list_workflows(
     workflows = query.offset(skip).limit(limit).all()
     
     return {
-        "total": query.count(),
         "workflows": [
             {
                 "workflow_id": str(w.workflow_id),
@@ -157,6 +192,29 @@ def list_workflows(
             }
             for w in workflows
         ]
+    }
+
+
+@router.patch("/name")
+def update_workflow_name(
+    workflow_id: UUID,
+    workflow_name: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Update workflow name."""
+    workflow = db.query(Workflow).filter(Workflow.workflow_id == workflow_id).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    workflow.workflow_name = workflow_name
+    db.commit()
+    
+    return {
+        "message": "Workflow name updated successfully",
+        "workflow_id": workflow_id,
+        "workflow_name": workflow_name
     }
 
 

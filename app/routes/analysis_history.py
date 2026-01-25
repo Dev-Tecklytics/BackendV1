@@ -6,6 +6,7 @@ from app.core.core_context import get_core_context
 from app.core.deps import get_db
 from app.models.analysis_history import AnalysisHistory
 from app.models.workflow import Workflow
+from app.models.code_review import CodeReview
 
 router = APIRouter(
     prefix="/api/v1/analyze",
@@ -48,11 +49,44 @@ def analysis_history(
                 result_workflow_id = res.get("id") or res.get("workflow_id")
                 
                 if result_workflow_id in workflow_id_list:
+                    # Get workflow data for additional fields
+                    workflow = db.query(Workflow).filter(Workflow.workflow_id == result_workflow_id).first()
+                    code_review = db.query(CodeReview).filter(CodeReview.workflow_id == result_workflow_id).first() if workflow else None
+                    
                     # Match /uipath structure
                     if "workflow_id" in res and "id" not in res:
                         res["id"] = res["workflow_id"]
+                    
+                    # Add status if missing
+                    if "status" not in res:
+                        res["status"] = record.status
+                    
+                    # Add workflow metrics if available
+                    if workflow:
+                        res["metrics"] = {
+                            "activity_count": workflow.activity_count,
+                            "nesting_depth": workflow.nesting_depth,
+                            "variable_count": workflow.variable_count,
+                            "invoked_workflows": workflow.invoked_workflows,
+                            "has_custom_code": workflow.has_custom_code
+                        }
+                        res["complexity"] = {
+                            "score": workflow.complexity_score,
+                            "level": workflow.complexity_level
+                        }
+                    
+                    # Add code review if available
+                    if code_review:
+                        res["code_review"] = {
+                            "overall_score": code_review.overall_score,
+                            "grade": code_review.grade,
+                            "total_issues": code_review.total_issues,
+                            "findings": code_review.findings
+                        }
+                    
                     final_history.append(res)
-        
+        print(final_history)
+        print("final")
         return final_history
     else:
         # Return all analysis history for the user
@@ -67,6 +101,12 @@ def analysis_history(
         for record in history:
             if record.result and isinstance(record.result, dict):
                 res = record.result.copy()
+                result_workflow_id = res.get("id") or res.get("workflow_id")
+                
+                # Get workflow data for additional fields
+                workflow = db.query(Workflow).filter(Workflow.workflow_id == result_workflow_id).first() if result_workflow_id else None
+                code_review = db.query(CodeReview).filter(CodeReview.workflow_id == result_workflow_id).first() if workflow else None
+                
                 # Ensure compatibility with /uipath structure
                 if "workflow_id" in res and "id" not in res:
                     res["id"] = res["workflow_id"]
@@ -78,6 +118,29 @@ def analysis_history(
                     res["workflowName"] = record.file_name
                 if "platform" not in res:
                     res["platform"] = getattr(record, 'platform', 'Unknown')
+                
+                # Add workflow metrics if available
+                if workflow:
+                    res["metrics"] = {
+                        "activity_count": workflow.activity_count,
+                        "nesting_depth": workflow.nesting_depth,
+                        "variable_count": workflow.variable_count,
+                        "invoked_workflows": workflow.invoked_workflows,
+                        "has_custom_code": workflow.has_custom_code
+                    }
+                    res["complexity"] = {
+                        "score": workflow.complexity_score,
+                        "level": workflow.complexity_level
+                    }
+                
+                # Add code review if available
+                if code_review:
+                    res["code_review"] = {
+                        "overall_score": code_review.overall_score,
+                        "grade": code_review.grade,
+                        "total_issues": code_review.total_issues,
+                        "findings": code_review.findings
+                    }
                     
                 final_history.append(res)
             else:

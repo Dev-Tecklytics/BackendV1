@@ -233,6 +233,7 @@ def upload_file_for_analysis(
 
     except Exception as e:
         logger.error(f"Analysis failed: {str(e)}")
+        print(e)
         analysis.status = AnalysisStatus.FAILED
         analysis.result = {
             "error": str(e),
@@ -388,8 +389,19 @@ def upload_and_analyze_uipath(
                 if isinstance(finding, dict):
                     detected_issues.append(finding.get("message", "Unknown issue"))
 
-        if metrics.has_custom_code:
-            detected_issues.append("Contains custom code/scripts")
+        try:
+            if hasattr(metrics.has_custom_code, '__call__'):
+                # If it's a function, call it
+                has_custom_code_result = metrics.has_custom_code()
+            else:
+                # If it's already a boolean value
+                has_custom_code_result = bool(metrics.has_custom_code)
+                
+            if has_custom_code_result:
+                detected_issues.append("Contains custom code/scripts")
+        except Exception:
+            # Skip custom code check if it fails
+            pass
         # Suggestions
         suggestions = []
         if review.findings:
@@ -442,12 +454,16 @@ def upload_and_analyze_uipath(
         return result
 
     except Exception as e:
+        import traceback
         analysis.status = AnalysisStatus.FAILED
         analysis.result = {
             "error": str(e),
-            "error_type": type(e).__name__
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
         }
         db.commit()
+        print("Full traceback:")
+        print(traceback.format_exc())
 
         raise HTTPException(
             status_code=400,

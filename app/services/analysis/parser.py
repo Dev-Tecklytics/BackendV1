@@ -78,7 +78,8 @@ def parse_workflow(file_path: str, platform: str) -> ParsedWorkflow:
     if platform == "UiPath":
 
         def clean_tag(tag):
-            return tag.split('}')[-1] if '}' in tag else tag
+            tag_str = str(tag) if tag is not None else ""
+            return tag_str.split('}')[-1] if '}' in tag_str else tag_str
 
         # Infrastructure / Metadata elements to ignore
         IGNORED_TAGS = {
