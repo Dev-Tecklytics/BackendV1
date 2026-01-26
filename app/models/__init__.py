@@ -12,3 +12,4 @@ from .activity_mapping import ActivityMapping
 from .batch_job import BatchJob
 from .code_review import CodeReview
 from .custom_rules import CustomRule
+from .variable_analysis import VariableAnalysis

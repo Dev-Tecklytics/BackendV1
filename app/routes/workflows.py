@@ -261,16 +261,29 @@ def delete_workflow(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Delete a workflow."""
+    """Delete a workflow and related data."""
     workflow = db.query(Workflow).filter(Workflow.workflow_id == workflow_id).first()
     
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
     
+    # Delete related analysis history
+    from app.models.analysis_history import AnalysisHistory
+    db.query(AnalysisHistory).filter(
+        AnalysisHistory.result.op('->>')('id') == str(workflow_id)
+    ).delete(synchronize_session=False)
+    
+    # Delete related file
+    if workflow.file_id:
+        file_record = db.query(File).filter(File.file_id == workflow.file_id).first()
+        if file_record:
+            db.delete(file_record)
+    
+    # Delete workflow
     db.delete(workflow)
     db.commit()
     
     return {
-        "message": "Workflow deleted successfully",
+        "message": "Workflow and related data deleted successfully",
         "workflow_id": str(workflow_id)
     }

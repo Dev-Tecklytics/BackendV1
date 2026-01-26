@@ -61,6 +61,9 @@ def analysis_history(
                     if "status" not in res:
                         res["status"] = record.status
                     
+                    # Always use workflow name from database
+                    res["workflowName"] = workflow.workflow_name if workflow else record.file_name
+                    
                     # Add workflow metrics if available
                     if workflow:
                         res["metrics"] = {
@@ -114,8 +117,8 @@ def analysis_history(
                 # Add status/filename/id if missing
                 if "status" not in res:
                     res["status"] = record.status
-                if "workflowName" not in res:
-                    res["workflowName"] = record.file_name
+                # Always use workflow name from database
+                res["workflowName"] = workflow.workflow_name if workflow else record.file_name
                 if "platform" not in res:
                     res["platform"] = getattr(record, 'platform', 'Unknown')
                 
