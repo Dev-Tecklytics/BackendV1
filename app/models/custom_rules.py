@@ -13,9 +13,13 @@ class CustomRule(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"))
 
     name = Column(String, nullable=False)
-    rule_type = Column(String)  # regex | activity_count | nesting_depth
-    config = Column(JSON)
-    severity = Column(String)
+    category = Column(String, nullable=True)
+    severity = Column(String, nullable=True)
+    platform = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    recommendation = Column(String, nullable=True)
+    rule_type = Column(String)  # regex | activity_count | nesting_depth | custom
+    config = Column(JSON, nullable=True)
 
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
